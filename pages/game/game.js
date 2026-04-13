@@ -31,6 +31,14 @@ Page({
 
   // === 步骤一：游戏初始化 ===
   initGame() {
+    // 初始化历史记录快照和被移除棋子记录，以及效果池
+    this.boardHistory = [];
+    this.removedPieces = [];
+    this.playerEffects = {
+      1: { silence: 0, protect: 0 },
+      2: { silence: 0, protect: 0 }
+    };
+
     // 1. 获取一个空的 15x15 棋盘 (调用外部模块)
     const newBoard = ruleConfig.resetGame ? ruleConfig.resetGame() : this._createEmptyBoard();
     
@@ -110,8 +118,30 @@ Page({
   // === 步骤四：对战主逻辑 ===
   processMove(row, col) {
     let board = this.data.board;
+    // ----- [B同学技能拦截]：如果当前处于“选择棋子”的状态（比如飞沙走石） -----
+    if (this.data.pendingSkill) {
+      if (board[row][col] === 0) {
+        wx.showToast({ title: '不能选空地，请点击对手棋子', icon: 'none' });
+        return;
+      }
+      if (board[row][col] === this.data.currentPlayer) {
+        wx.showToast({ title: '不能拿自己的棋子', icon: 'none' });
+        return;
+      }
+      
+      this.executeSkill(this.data.pendingSkill.index, this.data.pendingSkill.skill, { target: { row, col } });
+      this.setData({ pendingSkill: null });
+      return; 
+    }
+    // -------------------------------------------------------------
     // 判断该位置是否已有棋子
     if (board[row][col] !== 0) return;
+
+    // 果是玩家(黑)落子，在真正改变棋盘前记录当前快照（用于时光倒流）
+    if (this.data.currentPlayer === 1) {
+        if (!this.boardHistory) this.boardHistory = [];
+        this.boardHistory.push(JSON.parse(JSON.stringify(board)));
+    }
 
     // 落子
     board[row][col] = this.data.currentPlayer;
@@ -127,6 +157,15 @@ Page({
     // 更新技能冷却时间（针对玩家）
     if (this.data.currentPlayer === 1) {
         this.updateSkillCooldowns();
+    }
+
+    // 更新特效倒计时（减少自身身上挂着的所有buff/debuff的时间）
+    if(this.playerEffects[this.data.currentPlayer]) {
+        for(let eff in this.playerEffects[this.data.currentPlayer]) {
+            if(this.playerEffects[this.data.currentPlayer][eff] > 0) {
+                this.playerEffects[this.data.currentPlayer][eff]--;
+            }
+        }
     }
 
     // 切换玩家 (调用B同学的方法)
@@ -155,8 +194,16 @@ Page({
   handleSkillClick(e) {
     if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
     
-    let index = e.currentTarget.dataset.index;
-    let skill = this.data.skills[index];
+    // 如果已经处于选中技能状态，再次点击取消
+    if (this.data.pendingSkill) {
+        this.setData({ pendingSkill: null });
+        wx.showToast({ title: '已取消技能目标选择', icon: 'none' });
+        return;
+    }
+
+    let pObj = this.getSkillInfoFromEvent(e);
+    if(!pObj) return;
+    let { index, skill } = pObj;
 
     // 如果冷却中，不可用
     if(skill.cooldown > 0) {
@@ -164,37 +211,105 @@ Page({
         return;
     }
 
-    // 调用技能逻辑
-    if(skillConfig.useSkill) {
-        let result = skillConfig.useSkill(skill.id, this.data.board, this.data.currentPlayer);
-        if(result.success) {
-            // 技能施放成功，进入冷却
-            let newSkills = [...this.data.skills];
-            newSkills[index].cooldown = skill.maxCooldown; // 设置冷却初始值
-            
-            this.setData({ 
-                board: result.newBoard, // 技能改变了棋盘
-                skills: newSkills 
-            });
-            this.drawBoard();
+    // 【检查沉默状态】
+    if (this.playerEffects[this.data.currentPlayer].silence > 0) {
+        wx.showToast({ title: '受到静如止水效果，技能被封印！', icon: 'none' });
+        return;
+    }
 
-            // 附带胜负判断(某些破坏技能可能直接赢了)
-            // 如果没赢，将回合让给AI
+    // 尝试执行（如果没有target看看是否要求target）
+    this.executeSkill(index, skill, null);
+  },
+
+  getSkillInfoFromEvent(e) {
+    let index = e.currentTarget.dataset.index;
+    // index是摊平后的index，在pages里找
+    let globalIndex = 0;
+    let targetSkill = null;
+    for(let page of this.data.skillPages) {
+        for(let s of page) {
+            if(globalIndex === index) { targetSkill = s; break; }
+            globalIndex++;
+        }
+        if(targetSkill) break;
+    }
+    return targetSkill ? { index, skill: targetSkill } : null;
+  },
+
+  executeSkill(index, skill, extraTargetInfo) {
+    if(!skillConfig.useSkill) return;
+
+    let extraContext = { history: this.boardHistory, removedPieces: this.removedPieces, playerEffects: this.playerEffects };
+    if (extraTargetInfo) { extraContext = Object.assign(extraContext, extraTargetInfo); }
+
+    let result = skillConfig.useSkill(skill.id, this.data.board, this.data.currentPlayer, extraContext);
+    
+    if (result.requiresTarget) {
+        wx.showToast({ title: '请在棋盘上点击目标棋子', icon: 'none' });
+        this.setData({ pendingSkill: { index, skill } });
+        return;
+    }
+
+    if(result.success) {
+        // 如果返回了清理后的历史记录（如时光倒流），则同步回去
+        if (result.newHistory) {
+            this.boardHistory = result.newHistory;
+        }
+        // 如果有移出的棋子
+        if (result.removedPiece) {
+            if(!this.removedPieces) this.removedPieces = [];
+            this.removedPieces.push(result.removedPiece);
+        }
+        // 如果使用了复活（移出队列减少）
+        if (result.newRemovedPieces) {
+            this.removedPieces = result.newRemovedPieces;
+        }
+        // 如果附加了特效Buff/Debuff
+        if (result.applyEffect) {
+            let eff = result.applyEffect;
+            this.playerEffects[eff.target][eff.effect] = eff.duration;
+        }
+
+        // 更新冷却，注意这里要更新 skillPages 里的对象
+        let newSkillPages = JSON.parse(JSON.stringify(this.data.skillPages));
+        let gIndex = 0;
+        for(let p = 0; p < newSkillPages.length; p++) {
+            for(let s = 0; s < newSkillPages[p].length; s++) {
+                if (gIndex === index) {
+                    newSkillPages[p][s].cooldown = skill.maxCooldown;
+                }
+                gIndex++;
+            }
+        }
+        
+        this.setData({ 
+            board: result.newBoard, // 技能改变了棋盘
+            skillPages: newSkillPages 
+        });
+        this.drawBoard();
+
+        // 附带胜负判断(某些破坏技能可能直接赢了)
+        // 如果没赢，且此技能不需要将回合连续留给自己（比如时光倒流/或者待确定的技能），将回合让给AI
+        if (!result.skipTurn) {
             let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : 2;
             this.setData({ currentPlayer: nextPlayer });
             setTimeout(() => { this.processAITurn(); }, 500);
-
-            wx.showToast({ title: `使用了 ${skill.name}`, icon: 'none' });
         }
+
+        wx.showToast({ title: `使用了 ${skill.name}`, icon: 'success' });
+    } else if (result.msg) {
+        wx.showToast({ title: result.msg, icon: 'none' });
     }
   },
 
   updateSkillCooldowns() {
-    let newSkills = this.data.skills.map(s => {
-        if(s.cooldown > 0) s.cooldown--;
-        return s;
-    });
-    this.setData({ skills: newSkills });
+    let newSkillPages = JSON.parse(JSON.stringify(this.data.skillPages));
+    for(let p = 0; p < newSkillPages.length; p++) {
+        for(let s = 0; s < newSkillPages[p].length; s++) {
+            if(newSkillPages[p][s].cooldown > 0) newSkillPages[p][s].cooldown--;
+        }
+    }
+    this.setData({ skillPages: newSkillPages });
   },
 
   // === 工具方法：处理胜利和重新开始 ===
