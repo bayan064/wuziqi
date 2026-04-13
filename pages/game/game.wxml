@@ -1,0 +1,29 @@
+<view class="container">
+  <!-- 顶部状态栏 -->
+  <view class="header">
+    <text class="title">技能五子棋</text>
+    <view class="turn-indicator">
+      当前回合：<text class="{{currentPlayer === 1 ? 'black-text' : 'white-text'}}">{{currentPlayer === 1 ? '● 黑棋 (玩家)' : '○ 白棋 (AI)'}}</text>
+    </view>
+  </view>
+
+  <!-- 棋盘区域 (A同学负责的Canvas绘制) -->
+  <view class="board-container">
+    <canvas type="2d" id="boardCanvas" class="board-canvas" bindtouchstart="handleBoardClick"></canvas>
+  </view>
+
+  <!-- 技能区域 -->
+  <view class="skills-area">
+    <block wx:for="{{skills}}" wx:key="id">
+      <view class="skill-btn {{item.cooldown > 0 ? 'disabled' : ''}}" bindtap="handleSkillClick" data-index="{{index}}">
+        <text class="skill-name">{{item.name}}</text>
+        <text class="skill-status">{{item.cooldown > 0 ? '冷却中:' + item.cooldown : '可用'}}</text>
+      </view>
+    </block>
+  </view>
+
+  <!-- 控制按钮 -->
+  <view class="control-area">
+    <button class="restart-btn" type="primary" bindtap="handleRestart">重新开始</button>
+  </view>
+</view>
