@@ -1,20 +1,25 @@
 /* pages/game/game.wxss */
 page {
-  background-color: #fdf6e3; /* 维持与首页一致的奶油底色 */
+  background-color: #fdf6e3;
 }
 
+/* 初始隐藏 */
 .container {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 30rpx 20rpx;
   box-sizing: border-box;
-  animation: slideIn 0.5s ease-out; /* 平滑切入动画 */
+
+  opacity: 0;
+  transform: translateX(100%);
 }
 
-@keyframes slideIn {
-  0% { transform: translateY(50rpx); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+/* 激活后整体滑入（同步） */
+.container.active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .header {
@@ -56,17 +61,18 @@ page {
 .board-container {
   width: 650rpx;
   height: 650rpx;
-  background-color: #ffd8a8; /* 偏卡通明亮的木板色 */
+  background-color: #ffd8a8;
   margin-bottom: 50rpx;
-  border: 8rpx solid #8b4513; /* 加粗纯色边框强调卡通感 */
-  border-radius: 20rpx; /* 圆角棋盘！更为俏皮 */
-  box-shadow: 0 12rpx 0 #d2a679; /* 3D厚度 */
-  overflow: hidden; /* 保障canvas不超出圆角 */
+  border: 8rpx solid #8b4513;
+  border-radius: 20rpx;
+  box-shadow: 0 12rpx 0 #d2a679;
+  overflow: hidden;
 }
 
 .board-canvas {
   width: 100%;
   height: 100%;
+  display: block; /* 防止canvas不同步 */
 }
 
 .skills-swiper {
@@ -79,7 +85,7 @@ page {
   display: flex;
   justify-content: space-around;
   width: 100%;
-  height: 100%; /* 撑满 swiper-item */
+  height: 100%;
 }
 
 .skill-btn {
@@ -92,11 +98,10 @@ page {
   justify-content: center;
   align-items: center;
   border: 4rpx solid #8b4513;
-  box-shadow: 0 8rpx 0 #bbb; /* 卡通实体阴影 */
+  box-shadow: 0 8rpx 0 #bbb;
   transition: all 0.1s;
 }
 
-/* 技能按下的Q弹反馈 */
 .skill-btn:active {
   transform: translateY(8rpx);
   box-shadow: 0 0 0 #bbb;
@@ -108,7 +113,7 @@ page {
   box-shadow: 0 8rpx 0 #999;
 }
 .skill-btn.disabled:active {
-  transform: none; /* 禁用的不给按 */
+  transform: none;
   box-shadow: 0 8rpx 0 #999;
 }
 

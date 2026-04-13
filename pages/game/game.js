@@ -1,36 +1,36 @@
 // pages/game/game.js
-// 引入 A 和 B 同学的模块
+
 import { drawBoard, getBoardPosition } from '../../utils/board.js';
 const ruleConfig = require('../../utils/rule.js')
-// 引入 C 自己负责的模块
 const skillConfig = require('../../utils/skill.js')
 const aiConfig = require('../../utils/ai.js')
 
 Page({
   data: {
-    board: [],         // 15x15二维数组 0=空 1=黑(玩家) 2=白(电脑)
-    currentPlayer: 1,  // 当前回合 (1黑，2白)
-    isGameOver: false, // 游戏是否结束
-    skills: [],        // 当前局生成的三个技能：{ id: '1', name: '技能名', cooldown: 0 }
-    canvasSize: 600,    // canvas实际像素尺寸（供A同学使用）
-    gameMode: 'ai'  // 【新增】'ai' 或 'double'
+    board: [],
+    currentPlayer: 1,
+    isGameOver: false,
+    skills: [],
+    canvasSize: 600,
+    gameMode: 'ai',
+
+    // ✅ 新增：控制动画同步
+    ready: false
   },
 
-  // 【修改这一块】在 pages/game/game.js 中
   onLoad(options) {
-    // 接收首页传来的模式参数
-    const mode = options.mode || 'ai'  // 默认人机模式
+    const mode = options.mode || 'ai'
     this.setData({ gameMode: mode })
     this.initGame()
   },
 
   onReady() {
-    // Canvas节点准备好后，初始化并交由A同学的画板模块绘制
     this.initCanvas();
   },
 
-  // === 步骤一：游戏初始化 ===
+  // === 游戏初始化 ===
   initGame() {
+<<<<<<< HEAD
     // 初始化历史记录快照和被移除棋子记录，以及效果池
     this.boardHistory = [];
     this.removedPieces = [];
@@ -41,9 +41,16 @@ Page({
 
     // 1. 获取一个空的 15x15 棋盘 (调用外部模块)
     const newBoard = ruleConfig.resetGame ? ruleConfig.resetGame() : this._createEmptyBoard();
+=======
+    const newBoard = ruleConfig.resetGame 
+      ? ruleConfig.resetGame() 
+      : this._createEmptyBoard();
+>>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
     
-    // 2. 获取技能并分页 (每页3个)
-    const newSkills = skillConfig.getRandomSkills ? skillConfig.getRandomSkills(3) : [];
+    const newSkills = skillConfig.getRandomSkills 
+      ? skillConfig.getRandomSkills(3) 
+      : [];
+
     const skillPages = [];
     for (let i = 0; i < newSkills.length; i += 3) {
       skillPages.push(newSkills.slice(i, i + 3));
@@ -51,7 +58,7 @@ Page({
 
     this.setData({
       board: newBoard,
-      currentPlayer: 1, // 永远是玩家(黑)先手
+      currentPlayer: 1,
       isGameOver: false,
       skills: newSkills,
       skillPages: skillPages
@@ -64,50 +71,55 @@ Page({
 
   _createEmptyBoard() {
     let board = [];
-    for (let r = 0; r < 15; r++) { board.push(new Array(15).fill(0)); }
+    for (let r = 0; r < 15; r++) {
+      board.push(new Array(15).fill(0));
+    }
     return board;
   },
 
-  // === 步骤二：Canvas 初始化与重新绘制 ===
+  // === Canvas 初始化（关键修改点）===
   initCanvas() {
-    // 微信小程序特有的 Canvas 2D 获取方式
     const query = wx.createSelectorQuery();
     query.select('#boardCanvas')
       .fields({ node: true, size: true })
       .exec((res) => {
         if (!res[0]) return;
+
         const canvas = res[0].node;
         this._ctx = canvas.getContext('2d');
 
-        // 处理高分屏适配
         const dpr = wx.getWindowInfo().pixelRatio;
         canvas.width = res[0].width * dpr;
         canvas.height = res[0].height * dpr;
         this._ctx.scale(dpr, dpr);
-        
-        // 记录尺寸，供点击时换算坐标使用
+
         this.setData({ canvasSize: res[0].width });
 
+        // ✅ 先画棋盘（但此时页面是隐藏的）
         this.drawBoard();
+
+        // ✅ 关键：延迟一帧再显示整个页面（保证同步）
+        setTimeout(() => {
+          this.setData({
+            ready: true
+          });
+        }, 50);
       });
   },
 
   drawBoard() {
-    // 呼叫 A 同学的绘制模块
     if (this._ctx) {
-       drawBoard(this._ctx, this.data.board, this.data.canvasSize);
+      drawBoard(this._ctx, this.data.board, this.data.canvasSize);
     }
   },
 
-  // === 步骤三：处理点击落子 ===
+  // === 点击落子 ===
   handleBoardClick(e) {
-    if (this.data.isGameOver || this.data.currentPlayer !== 1) return; // 没结束且必须是玩家回合
+    if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
     
-    // 获取落子坐标 (触控点坐标可能需要A同学的方法换算)
     const x = e.changedTouches[0].x;
     const y = e.changedTouches[0].y;
     
-    // 调用A同学提供的转换函数，把像素(x,y)转为棋盘上的行列(row, col)
     let pos = getBoardPosition(x, y, this.data.canvasSize);
     
     if (pos.row !== -1 && pos.col !== -1) {
@@ -115,9 +127,10 @@ Page({
     }
   },
 
-  // === 步骤四：对战主逻辑 ===
+  // === 对战逻辑 ===
   processMove(row, col) {
     let board = this.data.board;
+<<<<<<< HEAD
     // ----- [B同学技能拦截]：如果当前处于“选择棋子”的状态（比如飞沙走石） -----
     if (this.data.pendingSkill) {
       if (board[row][col] === 0) {
@@ -144,21 +157,25 @@ Page({
     }
 
     // 落子
+=======
+
+    if (board[row][col] !== 0) return;
+
+>>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
     board[row][col] = this.data.currentPlayer;
     this.setData({ board });
     this.drawBoard();
 
-    // 判断胜负 (调用B同学的方法)
     if (ruleConfig.checkWin && ruleConfig.checkWin(board, row, col)) {
         this.handleWin(this.data.currentPlayer);
         return;
     }
 
-    // 更新技能冷却时间（针对玩家）
     if (this.data.currentPlayer === 1) {
         this.updateSkillCooldowns();
     }
 
+<<<<<<< HEAD
     // 更新特效倒计时（减少自身身上挂着的所有buff/debuff的时间）
     if(this.playerEffects[this.data.currentPlayer]) {
         for(let eff in this.playerEffects[this.data.currentPlayer]) {
@@ -170,18 +187,22 @@ Page({
 
     // 切换玩家 (调用B同学的方法)
     let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : (this.data.currentPlayer === 1 ? 2 : 1);
+=======
+    let nextPlayer = ruleConfig.switchPlayer 
+      ? ruleConfig.switchPlayer(this.data.currentPlayer) 
+      : (this.data.currentPlayer === 1 ? 2 : 1);
+
+>>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
     this.setData({ currentPlayer: nextPlayer });
 
-    // 如果轮到AI，则调用AI落子逻辑
     if (nextPlayer === 2) {
        setTimeout(() => {
            this.processAITurn();
-       }, 500); // 假装思考 0.5 秒
+       }, 500);
     }
   },
 
   processAITurn() {
-    // 调用 C 自己的 AI 模块
     if(aiConfig.getAIMove) {
         let aiMove = aiConfig.getAIMove(this.data.board);
         if(aiMove) {
@@ -190,7 +211,7 @@ Page({
     }
   },
 
-  // === 步骤五：处理技能点击 ===
+  // === 技能 ===
   handleSkillClick(e) {
     if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
     
@@ -205,12 +226,12 @@ Page({
     if(!pObj) return;
     let { index, skill } = pObj;
 
-    // 如果冷却中，不可用
     if(skill.cooldown > 0) {
         wx.showToast({ title: '技能冷却中', icon: 'none' });
         return;
     }
 
+<<<<<<< HEAD
     // 【检查沉默状态】
     if (this.playerEffects[this.data.currentPlayer].silence > 0) {
         wx.showToast({ title: '受到静如止水效果，技能被封印！', icon: 'none' });
@@ -292,8 +313,41 @@ Page({
         // 如果没赢，且此技能不需要将回合连续留给自己（比如时光倒流/或者待确定的技能），将回合让给AI
         if (!result.skipTurn) {
             let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : 2;
+=======
+    if(skillConfig.useSkill) {
+        let result = skillConfig.useSkill(
+          skill.id, 
+          this.data.board, 
+          this.data.currentPlayer
+        );
+
+        if(result.success) {
+            let newSkills = [...this.data.skills];
+            newSkills[index].cooldown = skill.maxCooldown;
+            
+            this.setData({ 
+                board: result.newBoard,
+                skills: newSkills 
+            });
+
+            this.drawBoard();
+
+            let nextPlayer = ruleConfig.switchPlayer 
+              ? ruleConfig.switchPlayer(this.data.currentPlayer) 
+              : 2;
+
+>>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
             this.setData({ currentPlayer: nextPlayer });
+
             setTimeout(() => { this.processAITurn(); }, 500);
+<<<<<<< HEAD
+=======
+
+            wx.showToast({ 
+              title: `使用了 ${skill.name}`, 
+              icon: 'none' 
+            });
+>>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
         }
 
         wx.showToast({ title: `使用了 ${skill.name}`, icon: 'success' });
@@ -312,12 +366,14 @@ Page({
     this.setData({ skillPages: newSkillPages });
   },
 
-  // === 工具方法：处理胜利和重新开始 ===
+  // === 结束 / 重开 ===
   handleWin(winner) {
     this.setData({ isGameOver: true });
     wx.showModal({
       title: '游戏结束',
-      content: winner === 1 ? '黑棋 (玩家) 赢了！' : '白棋 (电脑) 赢了！',
+      content: winner === 1 
+        ? '黑棋 (玩家) 赢了！' 
+        : '白棋 (电脑) 赢了！',
       confirmText: '重新开始',
       showCancel: false,
       success: (res) => {
@@ -331,4 +387,4 @@ Page({
   handleRestart() {
     this.initGame();
   }
-})
+});
