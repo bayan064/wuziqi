@@ -1,0 +1,10 @@
+<view class="container">
+  <view class="title-area">
+    <text class="main-title">技能五子棋</text>
+    <text class="sub-title">15x15 随机技能大乱斗</text>
+  </view>
+
+  <view class="btn-area">
+    <button class="start-btn" type="primary" bindtap="startGame">开始游戏</button>
+  </view>
+</view>

@@ -5,7 +5,6 @@ function checkWin(board, lastX, lastY) {
   const player = board[lastX][lastY];
   if (player === 0) return false;
 
-  // 4个方向：水平、垂直、主对角线、次对角线
   const directions = [
     [1, 0],   // 水平
     [0, 1],   // 垂直
@@ -16,7 +15,6 @@ function checkWin(board, lastX, lastY) {
   for (let [dx, dy] of directions) {
     let count = 1;
     
-    // 正方向延伸
     for (let step = 1; step <= 4; step++) {
       const x = lastX + dx * step;
       const y = lastY + dy * step;
@@ -25,7 +23,6 @@ function checkWin(board, lastX, lastY) {
       else break;
     }
     
-    // 反方向延伸
     for (let step = 1; step <= 4; step++) {
       const x = lastX - dx * step;
       const y = lastY - dy * step;

@@ -1,0 +1,77 @@
+/* pages/index/index.wxss */
+page {
+  background-color: #fdf6e3; /* 温暖可爱的奶油色背景 */
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.title-area {
+  margin-bottom: 150rpx;
+  text-align: center;
+  animation: floatUp 2s ease-in-out infinite alternate; /* 呼吸悬浮动画 */
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-20rpx); }
+}
+
+.main-title {
+  display: block;
+  font-size: 76rpx;
+  font-weight: 900;
+  color: #ffaa00; /* 卡通亮橘色 */
+  -webkit-text-stroke: 4rpx #8b4513; /* 卡通描边 */
+  text-shadow: 6rpx 6rpx 0px #8b4513; /* 卡通立体阴影 */
+  margin-bottom: 30rpx;
+  letter-spacing: 4rpx;
+}
+
+.sub-title {
+  display: inline-block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #fff;
+  background-color: #8b4513;
+  padding: 10rpx 30rpx;
+  border-radius: 40rpx;
+  box-shadow: 0 4rpx 0 #5c2e0b;
+}
+
+.btn-area {
+  width: 60%;
+  animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.start-btn {
+  width: 100% !important;
+  height: 100rpx;
+  line-height: 100rpx;
+  padding: 0;
+  background-color: #ff7f50 !important; /* 珊瑚色 */
+  color: white !important;
+  font-size: 40rpx;
+  font-weight: bold;
+  border-radius: 50rpx;
+  border: 6rpx solid #8b4513;
+  box-shadow: 0 12rpx 0 #8b4513; /* 3D实体阴影 */
+  transition: all 0.1s;
+}
+
+/* 按钮按下的Q弹反馈 */
+.start-btn:active {
+  transform: translateY(12rpx);
+  box-shadow: 0 0 0 #8b4513;
+}
