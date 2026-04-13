@@ -1,42 +1,136 @@
 // utils/ai.js
-// 简单的AI对战逻辑（由C同学负责）
+// 智能 AI：会堵玩家 + 自己进攻
 
 /**
  * 电脑的回合落子算法
- * 接收当前 board，返回落子的 [row, col]
  * @param {Array} board 当前 15x15 棋盘
  * @returns {row: Number, col: Number} 落子坐标
  */
 const getAIMove = (board) => {
-    // 【开发步骤】：
-    // 1. 获取一个由AI生成的权值表 (贪心算法思路)。
-    // 2. 遍历棋盘上每个空点 board[r][c] === 0。
-    // 3. 将空点按照自己连子和玩家连子的“威胁度”打分。
-    // 4. 选择得分最高的点 `[bestR, bestC]` 返回。
-    // 5. 若得分全为 0 (甚至懒得写算法开头)，随机返回一个空白点。
+  // 收集所有空位
+  let emptySpots = [];
+  for (let r = 0; r < 15; r++) {
+    for (let c = 0; c < 15; c++) {
+      if (board[r][c] === 0) {
+        emptySpots.push({ row: r, col: c });
+      }
+    }
+  }
 
-    // --- 【基础版本（随机落子保底）】 ---
-    // 为了不阻塞进度，你可以一开始就直接使用“在所有空白点中随机选一个”的方法
-    // 之后有时间，再向大模型提问："请帮我用 JS 写一个基于五元组评分法的五子棋 AI 函数，输入 board 返回 row 和 col"
+  if (emptySpots.length === 0) return null;
+
+  // 给每个空位打分
+  let bestScore = -1;
+  let bestMove = emptySpots[0];
+
+  for (let spot of emptySpots) {
+    let score = 0;
     
-    let emptySpots = [];
-    for (let r = 0; r < 15; r++) {
-        for (let c = 0; c < 15; c++) {
-            if (board[r][c] === 0) {
-                emptySpots.push({ row: r, col: c });
-            }
-        }
+    // 进攻分：AI 自己（白棋=2）下在这里的分数
+    score += evaluatePosition(board, spot.row, spot.col, 2) * 1.0;
+    
+    // 防守分：堵玩家（黑棋=1）下在这里的分数，防守权重更高
+    score += evaluatePosition(board, spot.row, spot.col, 1) * 1.2;
+    
+    // 中心偏好：让 AI 更倾向于占中心
+    const center = 7;
+    const distanceToCenter = Math.abs(spot.row - center) + Math.abs(spot.col - center);
+    score += (28 - distanceToCenter) * 0.5;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = spot;
     }
+  }
 
-    if (emptySpots.length > 0) {
-        // 随机一个点落子（极简单 AI）
-        let randomIndex = Math.floor(Math.random() * emptySpots.length);
-        return emptySpots[randomIndex];
+  return bestMove;
+}
+
+/**
+ * 评估在某个位置下棋的分数
+ * @param {Array} board 棋盘
+ * @param {Number} row 行
+ * @param {Number} col 列
+ * @param {Number} player 玩家（1=黑棋玩家，2=白棋AI）
+ * @returns {Number} 分数
+ */
+function evaluatePosition(board, row, col, player) {
+  let totalScore = 0;
+  
+  // 四个方向：水平、垂直、主对角线、次对角线
+  const directions = [
+    [1, 0],   // 水平
+    [0, 1],   // 垂直
+    [1, 1],   // 主对角线
+    [1, -1]   // 次对角线
+  ];
+  
+  for (let [dx, dy] of directions) {
+    totalScore += evaluateDirection(board, row, col, dx, dy, player);
+  }
+  
+  return totalScore;
+}
+
+/**
+ * 评估单个方向上的分数
+ */
+function evaluateDirection(board, row, col, dx, dy, player) {
+  let count = 1;  // 当前棋子
+  let openLeft = 0;
+  let openRight = 0;
+  
+  // 正方向延伸
+  for (let step = 1; step <= 5; step++) {
+    const newRow = row + dx * step;
+    const newCol = col + dy * step;
+    if (newRow < 0 || newRow >= 15 || newCol < 0 || newCol >= 15) break;
+    if (board[newRow][newCol] === player) {
+      count++;
+    } else if (board[newRow][newCol] === 0) {
+      openRight++;
+      break;
+    } else {
+      break;
     }
-
-    return null; // 棋盘满了
+  }
+  
+  // 负方向延伸
+  for (let step = 1; step <= 5; step++) {
+    const newRow = row - dx * step;
+    const newCol = col - dy * step;
+    if (newRow < 0 || newRow >= 15 || newCol < 0 || newCol >= 15) break;
+    if (board[newRow][newCol] === player) {
+      count++;
+    } else if (board[newRow][newCol] === 0) {
+      openLeft++;
+      break;
+    } else {
+      break;
+    }
+  }
+  
+  // 根据连子数量返回分数
+  const totalOpen = openLeft + openRight;
+  
+  if (count >= 5) return 100000;  // 直接获胜
+  if (count === 4) {
+    if (totalOpen >= 1) return 30000;  // 活四
+    return 1000;  // 死四
+  }
+  if (count === 3) {
+    if (totalOpen >= 2) return 5000;   // 活三
+    if (totalOpen >= 1) return 200;    // 死三
+  }
+  if (count === 2) {
+    if (totalOpen >= 2) return 400;    // 活二
+    if (totalOpen >= 1) return 20;     // 死二
+  }
+  if (count === 1) return 5;
+  
+  return 0;
 }
 
 module.exports = {
-    getAIMove
+  getAIMove
 }

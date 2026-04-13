@@ -13,12 +13,14 @@ Page({
     skills: [],
     canvasSize: 600,
     gameMode: 'ai',
+    lastAIMove: null,
+    animatingMove: null ,
 
     // ✅ 新增：控制动画同步
     ready: false
   },
 
-  onLoad(options) {
+   onLoad(options) {
     const mode = options.mode || 'ai'
     this.setData({ gameMode: mode })
     this.initGame()
@@ -65,43 +67,47 @@ Page({
   },
 
   // === Canvas 初始化（关键修改点）===
-  initCanvas() {
-    const query = wx.createSelectorQuery();
-    query.select('#boardCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0]) return;
+ initCanvas() {
+  const query = wx.createSelectorQuery();
+  query.select('#boardCanvas')
+    .fields({ node: true, size: true })
+    .exec((res) => {
+      if (!res[0]) return;
 
-        const canvas = res[0].node;
-        this._ctx = canvas.getContext('2d');
+      const canvas = res[0].node;
+      this._ctx = canvas.getContext('2d');
 
-        const dpr = wx.getWindowInfo().pixelRatio;
-        canvas.width = res[0].width * dpr;
-        canvas.height = res[0].height * dpr;
-        this._ctx.scale(dpr, dpr);
+      const dpr = wx.getWindowInfo().pixelRatio;
+      canvas.width = res[0].width * dpr;
+      canvas.height = res[0].height * dpr;
+      this._ctx.scale(dpr, dpr);
 
-        this.setData({ canvasSize: res[0].width });
+      this.setData({ canvasSize: res[0].width });
 
-        // ✅ 先画棋盘（但此时页面是隐藏的）
+      // ❗先触发页面动画
+      this.setData({ ready: true });
+
+      // ✅ 等动画开始后再画canvas（关键）
+      setTimeout(() => {
         this.drawBoard();
-
-        // ✅ 关键：延迟一帧再显示整个页面（保证同步）
-        setTimeout(() => {
-          this.setData({
-            ready: true
-          });
-        }, 50);
-      });
-  },
+      }, 100);
+    });
+},
 
   drawBoard() {
     if (this._ctx) {
-      drawBoard(this._ctx, this.data.board, this.data.canvasSize);
+     drawBoard(
+  this._ctx,
+  this.data.board,
+  this.data.canvasSize,
+  this.data.lastAIMove,
+  this.data.animatingMove
+);
     }
   },
 
   // === 点击落子 ===
-  handleBoardClick(e) {
+handleBoardClick(e) {
     if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
     
     const x = e.changedTouches[0].x;
@@ -115,36 +121,50 @@ Page({
   },
 
   // === 对战逻辑 ===
-  processMove(row, col) {
-    let board = this.data.board;
+ processMove(row, col) {
+  let board = this.data.board;
+  if (board[row][col] !== 0) return;
 
-    if (board[row][col] !== 0) return;
+  const player = this.data.currentPlayer;
 
-    board[row][col] = this.data.currentPlayer;
+  board[row][col] = player;
+
+  // ✅ AI 落子 → 启动动画
+  if (player === 2) {
+    this.setData({
+      animatingMove: { row, col, progress: 0 },
+      lastAIMove: { row, col }
+    });
+
+    this.animatePiece(); // 启动动画
+  } else {
     this.setData({ board });
     this.drawBoard();
+  }
 
-    if (ruleConfig.checkWin && ruleConfig.checkWin(board, row, col)) {
-        this.handleWin(this.data.currentPlayer);
-        return;
-    }
+  // ===== 胜负判断 =====
+  if (ruleConfig.checkWin && ruleConfig.checkWin(board, row, col)) {
+    this.handleWin(player);
+    return;
+  }
 
-    if (this.data.currentPlayer === 1) {
-        this.updateSkillCooldowns();
-    }
+  if (player === 1) {
+    this.updateSkillCooldowns();
+  }
 
-    let nextPlayer = ruleConfig.switchPlayer 
-      ? ruleConfig.switchPlayer(this.data.currentPlayer) 
-      : (this.data.currentPlayer === 1 ? 2 : 1);
+  let nextPlayer = ruleConfig.switchPlayer
+    ? ruleConfig.switchPlayer(player)
+    : (player === 1 ? 2 : 1);
 
-    this.setData({ currentPlayer: nextPlayer });
+  this.setData({ currentPlayer: nextPlayer });
 
-    if (nextPlayer === 2) {
+if (nextPlayer === 2) {
        setTimeout(() => {
            this.processAITurn();
        }, 500);
     }
   },
+
 
   processAITurn() {
     if(aiConfig.getAIMove) {
@@ -200,7 +220,47 @@ Page({
         }
     }
   },
+animatePiece() {
+  const duration = 200;
+  const start = Date.now();
 
+  const animate = () => {
+    let elapsed = Date.now() - start;
+    let progress = Math.min(elapsed / duration, 1);
+
+    // ✅ 安全 easing（不会负数）
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    this.setData({
+      animatingMove: {
+        ...this.data.animatingMove,
+        progress: ease
+      }
+    });
+
+    this.drawBoard();
+
+    if (elapsed < duration) {
+      // ❗关键：用 setTimeout 替代
+      setTimeout(animate, 16);
+    } else {
+      // 动画结束
+      const { row, col } = this.data.animatingMove;
+
+      let board = this.data.board;
+      board[row][col] = 2;
+
+      this.setData({
+        board,
+        animatingMove: null
+      });
+
+      this.drawBoard();
+    }
+  };
+
+  animate();
+},
   updateSkillCooldowns() {
     let newSkills = this.data.skills.map(s => {
         if(s.cooldown > 0) s.cooldown--;
