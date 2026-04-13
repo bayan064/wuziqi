@@ -12,15 +12,21 @@
     <canvas type="2d" id="boardCanvas" class="board-canvas" bindtouchstart="handleBoardClick"></canvas>
   </view>
 
-  <!-- 技能区域 -->
-  <view class="skills-area">
-    <block wx:for="{{skills}}" wx:key="id">
-      <view class="skill-btn {{item.cooldown > 0 ? 'disabled' : ''}}" bindtap="handleSkillClick" data-index="{{index}}">
-        <text class="skill-name">{{item.name}}</text>
-        <text class="skill-status">{{item.cooldown > 0 ? '冷却中:' + item.cooldown : '可用'}}</text>
-      </view>
+  <!-- 技能区域 (分页显示) -->
+  <swiper class="skills-swiper" indicator-dots="true" indicator-color="#d2a679" indicator-active-color="#8b4513">
+    <block wx:for="{{skillPages}}" wx:key="pageIndex" wx:for-item="page" wx:for-index="pageIndex">
+      <swiper-item>
+        <view class="skills-area">
+          <block wx:for="{{page}}" wx:key="id" wx:for-item="item" wx:for-index="itemIndex">
+            <view class="skill-btn {{item.cooldown > 0 ? 'disabled' : ''}}" bindtap="handleSkillClick" data-index="{{pageIndex * 3 + itemIndex}}">
+              <text class="skill-name">{{item.name}}</text>
+              <text class="skill-status">{{item.cooldown > 0 ? '冷却: ' + item.cooldown : '可用'}}</text>
+            </view>
+          </block>
+        </view>
+      </swiper-item>
     </block>
-  </view>
+  </swiper>
 
   <!-- 控制按钮 -->
   <view class="control-area">

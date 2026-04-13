@@ -1,33 +1,26 @@
 // utils/skill.js
 // 技能系统核心逻辑（由C同学负责）
 
+const getAllSkills = () => {
+    return [
+        { id: 1, name: '飞沙走石', maxCooldown: 3, cooldown: 0 },
+        { id: 2, name: '拾金不昧', maxCooldown: 5, cooldown: 0 },
+        { id: 3, name: '保洁上门', maxCooldown: 7, cooldown: 0 },
+        { id: 4, name: '擒拿擒拿', maxCooldown: 8, cooldown: 0 },
+        { id: 5, name: '静如止水', maxCooldown: 10, cooldown: 0 },
+        { id: 6, name: '时光倒流', maxCooldown: 12, cooldown: 0 },
+        { id: 7, name: '两级反转', maxCooldown: 999, cooldown: 0 },
+        { id: 8, name: '力拔山兮', maxCooldown: 999, cooldown: 0 }
+    ];
+};
+
 /**
  * 获取随机的三项技能
  * 供 game.js 在开局时调用
  */
 const getRandomSkills = (count) => {
-    // 基础技能库，包含ID，名称，描述，冷却回合
-    const allSkills = [
-        { id: 1, name: '飞沙走石', maxCooldown: 5, cooldown: 0 },
-        { id: 2, name: '定身术', maxCooldown: 4, cooldown: 0 },
-        { id: 3, name: '时空回溯', maxCooldown: 3, cooldown: 0 },
-        { id: 4, name: '天降神兵', maxCooldown: 5, cooldown: 0 },
-        { id: 5, name: '借力打力', maxCooldown: 4, cooldown: 0 },
-        { id: 6, name: '同归于尽', maxCooldown: 6, cooldown: 0 },
-        { id: 7, name: '金蝉脱壳', maxCooldown: 3, cooldown: 0 },
-        { id: 8, name: '双倍快乐', maxCooldown: 5, cooldown: 0 },
-        { id: 9, name: '迷雾重重', maxCooldown: 3, cooldown: 0 },
-        { id: 10, name: '复制粘贴', maxCooldown: 4, cooldown: 0 }
-    ];
-
-    // TODO: 实现随机挑选 count 个不重复的技能
-    
-    // 【开发步骤】：
-    // 1. 打乱 allSkills 数组。
-    // 2. 取前 count 个元素。
-    // 3. 将其返回给页面供 UI 渲染。
-
-    return [{ id: 1, name: '飞沙走石', maxCooldown: 5, cooldown: 0 }, { id: 2, name: '定身术', maxCooldown: 4, cooldown: 0 }, { id: 3, name: '时空回溯', maxCooldown: 3, cooldown: 0 }];
+    // 临时为了展示所有技能，分页展示全部8个技能
+    return getAllSkills();
 }
 
 /**
@@ -66,6 +59,28 @@ const useSkill = (skillId, board, player) => {
             success = true;
             break;
             
+        case 7: // 两级反转：交换棋盘中双方的棋子
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    if (newBoard[r][c] === 1) {
+                        newBoard[r][c] = 2;
+                    } else if (newBoard[r][c] === 2) {
+                        newBoard[r][c] = 1;
+                    }
+                }
+            }
+            success = true;
+            break;
+
+        case 8: // 力拔山兮：清空棋盘中所有棋子
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    newBoard[r][c] = 0;
+                }
+            }
+            success = true;
+            break;
+
         // ... (其它技能用相似的方式实现，遇到困难可以让大模型单独生成某一个特定技能的核心代码)
             
         default:

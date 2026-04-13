@@ -29,14 +29,19 @@ Page({
     // 1. 获取一个空的 15x15 棋盘 (调用外部模块)
     const newBoard = ruleConfig.resetGame ? ruleConfig.resetGame() : this._createEmptyBoard();
     
-    // 2. 随机抽取三个技能 (调用外部模块)
+    // 2. 获取技能并分页 (每页3个)
     const newSkills = skillConfig.getRandomSkills ? skillConfig.getRandomSkills(3) : [];
+    const skillPages = [];
+    for (let i = 0; i < newSkills.length; i += 3) {
+      skillPages.push(newSkills.slice(i, i + 3));
+    }
 
     this.setData({
       board: newBoard,
       currentPlayer: 1, // 永远是玩家(黑)先手
       isGameOver: false,
-      skills: newSkills
+      skills: newSkills,
+      skillPages: skillPages
     });
 
     if (this._ctx) {
