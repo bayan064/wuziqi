@@ -13,12 +13,14 @@ Page({
     skills: [],
     canvasSize: 600,
     gameMode: 'ai',
+    lastAIMove: null,
+    animatingMove: null ,
 
     // ✅ 新增：控制动画同步
     ready: false
   },
 
-  onLoad(options) {
+   onLoad(options) {
     const mode = options.mode || 'ai'
     this.setData({ gameMode: mode })
     this.initGame()
@@ -30,7 +32,6 @@ Page({
 
   // === 游戏初始化 ===
   initGame() {
-<<<<<<< HEAD
     // 初始化历史记录快照和被移除棋子记录，以及效果池
     this.boardHistory = [];
     this.removedPieces = [];
@@ -41,15 +42,8 @@ Page({
 
     // 1. 获取一个空的 15x15 棋盘 (调用外部模块)
     const newBoard = ruleConfig.resetGame ? ruleConfig.resetGame() : this._createEmptyBoard();
-=======
-    const newBoard = ruleConfig.resetGame 
-      ? ruleConfig.resetGame() 
-      : this._createEmptyBoard();
->>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
     
-    const newSkills = skillConfig.getRandomSkills 
-      ? skillConfig.getRandomSkills(3) 
-      : [];
+    const newSkills = skillConfig.getRandomSkills ? skillConfig.getRandomSkills(3) : [];
 
     const skillPages = [];
     for (let i = 0; i < newSkills.length; i += 3) {
@@ -61,7 +55,10 @@ Page({
       currentPlayer: 1,
       isGameOver: false,
       skills: newSkills,
-      skillPages: skillPages
+      skillPages: skillPages,
+      lastAIMove: null,
+      animatingMove: null,
+      pendingSkill: null
     });
 
     if (this._ctx) {
@@ -78,43 +75,47 @@ Page({
   },
 
   // === Canvas 初始化（关键修改点）===
-  initCanvas() {
-    const query = wx.createSelectorQuery();
-    query.select('#boardCanvas')
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0]) return;
+ initCanvas() {
+  const query = wx.createSelectorQuery();
+  query.select('#boardCanvas')
+    .fields({ node: true, size: true })
+    .exec((res) => {
+      if (!res[0]) return;
 
-        const canvas = res[0].node;
-        this._ctx = canvas.getContext('2d');
+      const canvas = res[0].node;
+      this._ctx = canvas.getContext('2d');
 
-        const dpr = wx.getWindowInfo().pixelRatio;
-        canvas.width = res[0].width * dpr;
-        canvas.height = res[0].height * dpr;
-        this._ctx.scale(dpr, dpr);
+      const dpr = wx.getWindowInfo().pixelRatio;
+      canvas.width = res[0].width * dpr;
+      canvas.height = res[0].height * dpr;
+      this._ctx.scale(dpr, dpr);
 
-        this.setData({ canvasSize: res[0].width });
+      this.setData({ canvasSize: res[0].width });
 
-        // ✅ 先画棋盘（但此时页面是隐藏的）
+      // ❗先触发页面动画
+      this.setData({ ready: true });
+
+      // ✅ 等动画开始后再画canvas（关键）
+      setTimeout(() => {
         this.drawBoard();
-
-        // ✅ 关键：延迟一帧再显示整个页面（保证同步）
-        setTimeout(() => {
-          this.setData({
-            ready: true
-          });
-        }, 50);
-      });
-  },
+      }, 100);
+    });
+},
 
   drawBoard() {
     if (this._ctx) {
-      drawBoard(this._ctx, this.data.board, this.data.canvasSize);
+     drawBoard(
+  this._ctx,
+  this.data.board,
+  this.data.canvasSize,
+  this.data.lastAIMove,
+  this.data.animatingMove
+);
     }
   },
 
   // === 点击落子 ===
-  handleBoardClick(e) {
+handleBoardClick(e) {
     if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
     
     const x = e.changedTouches[0].x;
@@ -130,7 +131,7 @@ Page({
   // === 对战逻辑 ===
   processMove(row, col) {
     let board = this.data.board;
-<<<<<<< HEAD
+
     // ----- [B同学技能拦截]：如果当前处于“选择棋子”的状态（比如飞沙走石） -----
     if (this.data.pendingSkill) {
       if (board[row][col] === 0) {
@@ -147,52 +148,56 @@ Page({
       return; 
     }
     // -------------------------------------------------------------
+
     // 判断该位置是否已有棋子
     if (board[row][col] !== 0) return;
 
-    // 果是玩家(黑)落子，在真正改变棋盘前记录当前快照（用于时光倒流）
-    if (this.data.currentPlayer === 1) {
+    const player = this.data.currentPlayer;
+
+    // 如果是玩家(黑)落子，在真正改变棋盘前记录当前快照（用于时光倒流）
+    if (player === 1) {
         if (!this.boardHistory) this.boardHistory = [];
         this.boardHistory.push(JSON.parse(JSON.stringify(board)));
     }
 
-    // 落子
-=======
+    board[row][col] = player;
 
-    if (board[row][col] !== 0) return;
+    // ✅ AI 落子 → 启动动画
+    if (player === 2) {
+      this.setData({
+        animatingMove: { row, col, progress: 0 },
+        lastAIMove: { row, col }
+      });
+      this.animatePiece(); // 启动动画
+    } else {
+      this.setData({ board });
+      this.drawBoard();
+    }
 
->>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
-    board[row][col] = this.data.currentPlayer;
-    this.setData({ board });
-    this.drawBoard();
-
+    // ===== 胜负判断 =====
     if (ruleConfig.checkWin && ruleConfig.checkWin(board, row, col)) {
-        this.handleWin(this.data.currentPlayer);
-        return;
+      this.handleWin(player);
+      return;
     }
 
-    if (this.data.currentPlayer === 1) {
-        this.updateSkillCooldowns();
+    if (player === 1) {
+      this.updateSkillCooldowns();
     }
 
-<<<<<<< HEAD
     // 更新特效倒计时（减少自身身上挂着的所有buff/debuff的时间）
-    if(this.playerEffects[this.data.currentPlayer]) {
-        for(let eff in this.playerEffects[this.data.currentPlayer]) {
-            if(this.playerEffects[this.data.currentPlayer][eff] > 0) {
-                this.playerEffects[this.data.currentPlayer][eff]--;
+    if(this.playerEffects && this.playerEffects[player]) {
+        for(let eff in this.playerEffects[player]) {
+            if(this.playerEffects[player][eff] > 0) {
+                this.playerEffects[player][eff]--;
             }
         }
     }
 
     // 切换玩家 (调用B同学的方法)
-    let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : (this.data.currentPlayer === 1 ? 2 : 1);
-=======
     let nextPlayer = ruleConfig.switchPlayer 
-      ? ruleConfig.switchPlayer(this.data.currentPlayer) 
-      : (this.data.currentPlayer === 1 ? 2 : 1);
+      ? ruleConfig.switchPlayer(player) 
+      : (player === 1 ? 2 : 1);
 
->>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
     this.setData({ currentPlayer: nextPlayer });
 
     if (nextPlayer === 2) {
@@ -201,6 +206,7 @@ Page({
        }, 500);
     }
   },
+
 
   processAITurn() {
     if(aiConfig.getAIMove) {
@@ -231,9 +237,8 @@ Page({
         return;
     }
 
-<<<<<<< HEAD
     // 【检查沉默状态】
-    if (this.playerEffects[this.data.currentPlayer].silence > 0) {
+    if (this.playerEffects && this.playerEffects[this.data.currentPlayer].silence > 0) {
         wx.showToast({ title: '受到静如止水效果，技能被封印！', icon: 'none' });
         return;
     }
@@ -313,41 +318,8 @@ Page({
         // 如果没赢，且此技能不需要将回合连续留给自己（比如时光倒流/或者待确定的技能），将回合让给AI
         if (!result.skipTurn) {
             let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : 2;
-=======
-    if(skillConfig.useSkill) {
-        let result = skillConfig.useSkill(
-          skill.id, 
-          this.data.board, 
-          this.data.currentPlayer
-        );
-
-        if(result.success) {
-            let newSkills = [...this.data.skills];
-            newSkills[index].cooldown = skill.maxCooldown;
-            
-            this.setData({ 
-                board: result.newBoard,
-                skills: newSkills 
-            });
-
-            this.drawBoard();
-
-            let nextPlayer = ruleConfig.switchPlayer 
-              ? ruleConfig.switchPlayer(this.data.currentPlayer) 
-              : 2;
-
->>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
             this.setData({ currentPlayer: nextPlayer });
-
             setTimeout(() => { this.processAITurn(); }, 500);
-<<<<<<< HEAD
-=======
-
-            wx.showToast({ 
-              title: `使用了 ${skill.name}`, 
-              icon: 'none' 
-            });
->>>>>>> 4a62f7536b7aa27e7a8217ee17670df5464f75b6
         }
 
         wx.showToast({ title: `使用了 ${skill.name}`, icon: 'success' });
@@ -355,7 +327,47 @@ Page({
         wx.showToast({ title: result.msg, icon: 'none' });
     }
   },
+animatePiece() {
+  const duration = 200;
+  const start = Date.now();
 
+  const animate = () => {
+    let elapsed = Date.now() - start;
+    let progress = Math.min(elapsed / duration, 1);
+
+    // ✅ 安全 easing（不会负数）
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    this.setData({
+      animatingMove: {
+        ...this.data.animatingMove,
+        progress: ease
+      }
+    });
+
+    this.drawBoard();
+
+    if (elapsed < duration) {
+      // ❗关键：用 setTimeout 替代
+      setTimeout(animate, 16);
+    } else {
+      // 动画结束
+      const { row, col } = this.data.animatingMove;
+
+      let board = this.data.board;
+      board[row][col] = 2;
+
+      this.setData({
+        board,
+        animatingMove: null
+      });
+
+      this.drawBoard();
+    }
+  };
+
+  animate();
+},
   updateSkillCooldowns() {
     let newSkillPages = JSON.parse(JSON.stringify(this.data.skillPages));
     for(let p = 0; p < newSkillPages.length; p++) {
