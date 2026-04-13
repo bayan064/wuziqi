@@ -1,4 +1,4 @@
-<view class="container">
+<view class="container {{ready ? 'active' : ''}}">
   <!-- 顶部状态栏 -->
   <view class="header">
     <text class="title">技能五子棋</text>
