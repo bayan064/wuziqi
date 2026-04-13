@@ -33,3 +33,6 @@
     <button class="restart-btn" type="primary" bindtap="handleRestart">重新开始</button>
   </view>
 </view>
+
+<!-- 技能说明手册（圆形图标） -->
+<skill-manual></skill-manual>

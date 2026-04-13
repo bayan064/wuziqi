@@ -15,3 +15,6 @@
     </button>
   </view>
 </view>
+
+<!-- 技能说明手册（圆形图标） -->
+<skill-manual></skill-manual>
