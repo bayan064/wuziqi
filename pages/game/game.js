@@ -12,11 +12,16 @@ Page({
     currentPlayer: 1,  // 当前回合 (1黑，2白)
     isGameOver: false, // 游戏是否结束
     skills: [],        // 当前局生成的三个技能：{ id: '1', name: '技能名', cooldown: 0 }
-    canvasSize: 600    // canvas实际像素尺寸（供A同学使用）
+    canvasSize: 600,    // canvas实际像素尺寸（供A同学使用）
+    gameMode: 'ai'  // 【新增】'ai' 或 'double'
   },
 
-  onLoad() {
-    this.initGame();
+  // 【修改这一块】在 pages/game/game.js 中
+  onLoad(options) {
+    // 接收首页传来的模式参数
+    const mode = options.mode || 'ai'  // 默认人机模式
+    this.setData({ gameMode: mode })
+    this.initGame()
   },
 
   onReady() {

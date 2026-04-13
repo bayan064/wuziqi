@@ -1,10 +1,17 @@
+<!--pages/index/index.wxml-->
 <view class="container">
   <view class="title-area">
-    <text class="main-title">技能五子棋</text>
-    <text class="sub-title">15x15 随机技能大乱斗</text>
+    <text class="main-title">🎯 技能五子棋</text>
+    <text class="sub-title">选择模式</text>
   </view>
-
+  
   <view class="btn-area">
-    <button class="start-btn" type="primary" bindtap="startGame">开始游戏</button>
+    <button class="btn btn-ai" bindtap="startAIGame">
+      🤖 人机对战
+    </button>
+    
+    <button class="btn btn-double" bindtap="startDoubleGame">
+      👥 双人对战
+    </button>
   </view>
 </view>

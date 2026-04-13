@@ -1,6 +1,6 @@
 /* pages/index/index.wxss */
 page {
-  background-color: #fdf6e3; /* 温暖可爱的奶油色背景 */
+  background-color: #fdf6e3;
 }
 
 .container {
@@ -13,9 +13,9 @@ page {
 }
 
 .title-area {
-  margin-bottom: 150rpx;
+  margin-bottom: 100rpx;
   text-align: center;
-  animation: floatUp 2s ease-in-out infinite alternate; /* 呼吸悬浮动画 */
+  animation: floatUp 2s ease-in-out infinite alternate;
 }
 
 @keyframes floatUp {
@@ -27,9 +27,9 @@ page {
   display: block;
   font-size: 76rpx;
   font-weight: 900;
-  color: #ffaa00; /* 卡通亮橘色 */
-  -webkit-text-stroke: 4rpx #8b4513; /* 卡通描边 */
-  text-shadow: 6rpx 6rpx 0px #8b4513; /* 卡通立体阴影 */
+  color: #ffaa00;
+  -webkit-text-stroke: 4rpx #8b4513;
+  text-shadow: 6rpx 6rpx 0px #8b4513;
   margin-bottom: 30rpx;
   letter-spacing: 4rpx;
 }
@@ -45,8 +45,12 @@ page {
   box-shadow: 0 4rpx 0 #5c2e0b;
 }
 
+/* 按钮区域 - 改成两列布局 */
 .btn-area {
-  width: 60%;
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 40rpx;
   animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
@@ -55,23 +59,32 @@ page {
   100% { transform: scale(1); opacity: 1; }
 }
 
-.start-btn {
+/* 基础按钮样式 */
+.btn {
   width: 100% !important;
   height: 100rpx;
   line-height: 100rpx;
   padding: 0;
-  background-color: #ff7f50 !important; /* 珊瑚色 */
-  color: white !important;
   font-size: 40rpx;
   font-weight: bold;
   border-radius: 50rpx;
   border: 6rpx solid #8b4513;
-  box-shadow: 0 12rpx 0 #8b4513; /* 3D实体阴影 */
+  box-shadow: 0 12rpx 0 #8b4513;
   transition: all 0.1s;
+  color: white !important;
 }
 
-/* 按钮按下的Q弹反馈 */
-.start-btn:active {
+.btn:active {
   transform: translateY(12rpx);
   box-shadow: 0 0 0 #8b4513;
+}
+
+/* 人机对战按钮 - 紫红色 */
+.btn-ai {
+  background-color: #f5576c !important;
+}
+
+/* 双人对战按钮 - 蓝色 */
+.btn-double {
+  background-color: #4facfe !important;
 }
