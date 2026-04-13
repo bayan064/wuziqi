@@ -1,6 +1,6 @@
 // pages/game/game.js
 // 引入 A 和 B 同学的模块
-const boardConfig = require('../../utils/board.js')
+import { drawBoard, getBoardPosition } from '../../utils/board.js';
 const ruleConfig = require('../../utils/rule.js')
 // 引入 C 自己负责的模块
 const skillConfig = require('../../utils/skill.js')
@@ -81,8 +81,8 @@ Page({
 
   drawBoard() {
     // 呼叫 A 同学的绘制模块
-    if (boardConfig.drawBoard && this._ctx) {
-        boardConfig.drawBoard(this._ctx, this.data.board, this.data.canvasSize);
+    if (this._ctx) {
+       drawBoard(this._ctx, this.data.board, this.data.canvasSize);
     }
   },
 
@@ -95,7 +95,7 @@ Page({
     const y = e.changedTouches[0].y;
     
     // 调用A同学提供的转换函数，把像素(x,y)转为棋盘上的行列(row, col)
-    let pos = boardConfig.getBoardPosition ? boardConfig.getBoardPosition(x, y, this.data.canvasSize) : {row: -1, col: -1};
+    let pos = getBoardPosition(x, y, this.data.canvasSize);
     
     if (pos.row !== -1 && pos.col !== -1) {
        this.processMove(pos.row, pos.col);
