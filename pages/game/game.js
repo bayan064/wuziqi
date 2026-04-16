@@ -1,6 +1,7 @@
 // pages/game/game.js
 
 import { drawBoard, getBoardPosition } from '../../utils/board.js';
+const boardConfig = require('../../utils/board.js')//新增
 const ruleConfig = require('../../utils/rule.js')
 const skillConfig = require('../../utils/skill.js')
 const aiConfig = require('../../utils/ai.js')
@@ -15,14 +16,16 @@ Page({
     gameMode: 'ai',
     lastAIMove: null,
     animatingMove: null ,
-
     // ✅ 新增：控制动画同步
-    ready: false
+    ready: false,
+    gameMode: 'ai'  // 【新增】'ai' 或 'double'
   },
 
    onLoad(options) {
+    console.log('=== onLoad 收到的参数 ===', options)
     const mode = options.mode || 'ai'
     this.setData({ gameMode: mode })
+    console.log('=== 设置后的 gameMode ===', mode)
     this.initGame()
   },
 
@@ -116,16 +119,28 @@ Page({
 
   // === 点击落子 ===
 handleBoardClick(e) {
-    if (this.data.isGameOver || this.data.currentPlayer !== 1) return;
-    
-    const x = e.changedTouches[0].x;
-    const y = e.changedTouches[0].y;
-    
-    let pos = getBoardPosition(x, y, this.data.canvasSize);
-    
-    if (pos.row !== -1 && pos.col !== -1) {
-       this.processMove(pos.row, pos.col);
-    }
+  console.log('=== 点击时 gameMode ===', this.data.gameMode, 'currentPlayer ===', this.data.currentPlayer)
+  
+  if (this.data.isGameOver) return;
+  
+  // 人机模式：只有黑棋（玩家）能下
+  if (this.data.gameMode === 'ai' && this.data.currentPlayer !== 1) return;
+  
+  // 获取落子坐标
+  const x = e.detail?.x ?? e.touches?.[0]?.x;
+  const y = e.detail?.y ?? e.touches?.[0]?.y;
+  
+  if (x === undefined || y === undefined) {
+    console.log('无法获取坐标')
+    return
+  }
+  
+  // 直接调用 boardConfig 的转换函数，传入原始坐标和 canvasSize
+  let pos = boardConfig.getBoardPosition(x, y, this.data.canvasSize);
+  
+  if (pos.row !== -1 && pos.col !== -1) {
+    this.processMove(pos.row, pos.col);
+  }
   },
 
   // === 对战逻辑 ===
@@ -194,17 +209,17 @@ handleBoardClick(e) {
     }
 
     // 切换玩家 (调用B同学的方法)
-    let nextPlayer = ruleConfig.switchPlayer 
-      ? ruleConfig.switchPlayer(player) 
-      : (player === 1 ? 2 : 1);
+     // 切换玩家
+  let nextPlayer = ruleConfig.switchPlayer ? ruleConfig.switchPlayer(this.data.currentPlayer) : (this.data.currentPlayer === 1 ? 2 : 1);
+  this.setData({ currentPlayer: nextPlayer });
 
-    this.setData({ currentPlayer: nextPlayer });
-
-    if (nextPlayer === 2) {
-       setTimeout(() => {
-           this.processAITurn();
-       }, 500);
-    }
+// 【修改】人机模式且轮到AI时，才调用AI落子
+if (this.data.gameMode === 'ai' && nextPlayer === 2 && !this.data.isGameOver) {
+   setTimeout(() => {
+       this.processAITurn();
+   }, 500);
+}
+// 双人模式：什么都不做，等另一个玩家点击
   },
 
 
